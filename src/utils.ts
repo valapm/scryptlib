@@ -799,15 +799,22 @@ export function genLaunchConfigFile(constructorArgs: SupportedParamType[], pubFu
     configurations: [debugConfig]
   };
 
-  const filename = `${name}-launch.json`;
-  const file = join(fs.mkdtempSync(`${tmpdir()}${sep}sCrypt.`), filename);
-  fs.writeFileSync(file, JSON.stringify(launch, (key, value) => (
-    typeof value === 'bigint'
-      ? value.toString()
-      : value // return everything else unchanged
-  ), 2));
-  return path2uri(file);
 
+  try {
+    const filename = `${name}-launch.json`;
+    const file = join(fs.mkdtempSync(`${tmpdir()}${sep}sCrypt.`), filename);
+    fs.writeFileSync(file, JSON.stringify(launch, (key, value) => (
+      typeof value === 'bigint'
+        ? value.toString()
+        : value // return everything else unchanged
+    ), 2));
+    return path2uri(file);
+  } catch (e) {
+    console.error('writeFileSync fail', e);
+  }
+
+  console.error('DebugLaunch configurations', launch);
+  return '';
 }
 
 /***

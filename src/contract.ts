@@ -311,8 +311,14 @@ export class AbstractContract {
 
         // in vscode termianal need to use [:] to jump to file line, but here need to use [#] to jump to file line in output channel.
         if (opcode.pos) {
-          error = `VerifyError: ${bsi.errstr} \n\t[Go to Source](${path2uri(opcode.pos.file)}#${opcode.pos.line})  fails at ${opcode.opcode}\n`;
 
+          let file = opcode.pos.file;
+          try {
+            file = path2uri(opcode.pos.file);
+          } catch (e) {
+            console.error('path2uri error', e);
+          }
+          error = `VerifyError: ${bsi.errstr} \n\t[Go to Source](${file}#${opcode.pos.line})  fails at ${opcode.opcode}\n`;
           if (args && ['OP_CHECKSIG', 'OP_CHECKSIGVERIFY', 'OP_CHECKMULTISIG', 'OP_CHECKMULTISIGVERIFY'].includes(opcode.opcode)) {
             if (!txCtx) {
               throw new Error('should provide txContext when verify');
