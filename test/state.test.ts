@@ -16,17 +16,22 @@ describe('state_test', () => {
 
 
     it('should serializer state success', () => {
-        const stateExample = new StateExample(1000, new Bytes("0101"), true,
-            new PrivKey("11"),
-            new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf"),
-            new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4"),
-            new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            new OpCodeType("76"),
-            new SigHashType(SigHash.ALL | SigHash.FORKID),
-            new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541"),
-        );
+        const stateExample = new StateExample();
+
+        //init states
+        stateExample.counter = 1000;
+        stateExample.state_bytes = new Bytes("0101");
+        stateExample.state_bool = true;
+        stateExample.privKey = new PrivKey("11");
+        stateExample.pubkey = new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf");
+        stateExample.ripemd160 = new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4");
+        stateExample.sha256 = new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        stateExample.opCodeType = new OpCodeType("76");
+        stateExample.sigHashType = new SigHashType(SigHash.ALL | SigHash.FORKID);
+        stateExample.sig = new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541");
 
         expect(stateExample.dataPart.toHex()).to.be.equal('02e80302010101010b2103f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf1440933785f6695815a7e1afb59aff20226bbb5bd420ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad0176014147304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541ad00000000');
+        //update state
         stateExample.counter++;
         stateExample.state_bytes = new Bytes('010101');
         stateExample.state_bool = false;
@@ -38,15 +43,19 @@ describe('state_test', () => {
 
 
     it('should deserializer state success', () => {
-        const stateExample = new StateExample(1000, new Bytes('0101'), true,
-            new PrivKey("11"),
-            new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf"),
-            new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4"),
-            new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            new OpCodeType('76'),
-            new SigHashType(SigHash.ALL | SigHash.FORKID),
-            new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541")
-        );
+        const stateExample = new StateExample();
+
+        //init states
+        stateExample.counter = 1000;
+        stateExample.state_bytes = new Bytes("0101");
+        stateExample.state_bool = true;
+        stateExample.privKey = new PrivKey("11");
+        stateExample.pubkey = new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf");
+        stateExample.ripemd160 = new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4");
+        stateExample.sha256 = new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        stateExample.opCodeType = new OpCodeType("76");
+        stateExample.sigHashType = new SigHashType(SigHash.ALL | SigHash.FORKID);
+        stateExample.sig = new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541");
 
         let newStateExample = StateExample.fromHex(stateExample.lockingScript.toHex());
 
@@ -63,15 +72,19 @@ describe('state_test', () => {
 
 
     it('should call success', () => {
-        const stateExample = new StateExample(1000, new Bytes('0101'), true,
-            new PrivKey("11"),
-            new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf"),
-            new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4"),
-            new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            new OpCodeType('76'),
-            new SigHashType(SigHash.ALL | SigHash.FORKID),
-            new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541")
-        );
+        const stateExample = new StateExample();
+
+        //init states
+        stateExample.counter = 1000;
+        stateExample.state_bytes = new Bytes("0101");
+        stateExample.state_bool = true;
+        stateExample.privKey = new PrivKey("11");
+        stateExample.pubkey = new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf");
+        stateExample.ripemd160 = new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4");
+        stateExample.sha256 = new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+        stateExample.opCodeType = new OpCodeType("76");
+        stateExample.sigHashType = new SigHashType(SigHash.ALL | SigHash.FORKID);
+        stateExample.sig = new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541");
 
         let newLockingScript = stateExample.getStateScript({
             counter: 1001,
@@ -129,15 +142,7 @@ describe('state_test', () => {
 
     it('should throw if providing state that not exist', () => {
 
-        const stateExample = new StateExample(1000, new Bytes('0101'), true,
-            new PrivKey("11"),
-            new PubKey("03f4a8ec3e44903ea28c00113b351af3baeec5662e5e2453c19188fbcad00fb1cf"),
-            new Ripemd160("40933785f6695815a7e1afb59aff20226bbb5bd4"),
-            new Sha256("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),
-            new OpCodeType('76'),
-            new SigHashType(SigHash.ALL | SigHash.FORKID),
-            new Sig("304402207b6ce0aaae3a379721a364ab11414abd658a9940c10d48cd0bc6b273e81d058902206f6c0671066aef4c0de58ab8c349fde38ef3ea996b9f2e79241ebad96049299541")
-        );
+        const stateExample = new StateExample();
 
 
         expect(() => {
@@ -170,7 +175,10 @@ describe('state_test', () => {
     it('should success when not all state properties are provided in getStateScript() ', () => {
 
         const StateCounter = buildContractClass(loadDescription('statecounter_desc.json'));
-        let counter = new StateCounter(0, true);
+        let counter = new StateCounter();
+        //init states
+        counter.counter = 0;
+        counter.done = true
 
         let newLockingScript = counter.getStateScript({
             counter: 1
@@ -199,7 +207,10 @@ describe('state_test', () => {
     it('should fail when wrong value state properties are provided in getStateScript() ', () => {
 
         const StateCounter = buildContractClass(loadDescription('statecounter_desc.json'));
-        let counter = new StateCounter(0, true);
+        let counter = new StateCounter();
+        //init states
+        counter.counter = 0;
+        counter.done = true
 
         let newLockingScript = counter.getStateScript({
             counter: 1,
@@ -230,11 +241,12 @@ describe('state_test', () => {
 
         const Counter = buildContractClass(loadDescription('ststate_desc.json'));
         const { States } = buildTypeClasses(loadDescription('ststate_desc.json'));
-        let counter = new Counter(new States({
+        let counter = new Counter();
+        counter.states = new States({
             counter: 1000,
             done: true,
             hex: new Bytes('02')
-        }));
+        })
 
         let newLockingScript = counter.getStateScript({
             states: new States({
@@ -266,7 +278,8 @@ describe('state_test', () => {
     it('should success when state property is array', () => {
 
         const Counter = buildContractClass(loadDescription('arraystate_desc.json'));
-        let counter = new Counter([0, 1, 2]);
+        let counter = new Counter();
+        counter.counters = [0, 1, 2];
 
         let newLockingScript = counter.getStateScript({
             counters: [1, 2, 3]
@@ -295,10 +308,14 @@ describe('state_test', () => {
 
         const Counter = buildContractClass(loadDescription('mixstate_desc.json'));
         const { States, StatesA } = buildTypeClasses(loadDescription('mixstate_desc.json'));
-        let counter = new Counter(new States({
+        let counter = new Counter();
+
+        counter.states = new States({
             counter: 1000,
             done: true
-        }), [new StatesA({
+        });
+
+        counter.sss = [new StatesA({
             states: [new States({
                 counter: 0,
                 done: true
@@ -307,7 +324,7 @@ describe('state_test', () => {
                 done: false
             })],
             hex: new Bytes('02')
-        })]);
+        })];
 
 
         let newLockingScript = counter.getStateScript({
@@ -350,10 +367,14 @@ describe('state_test', () => {
 
         const Counter = buildContractClass(loadDescription('mixstate_desc.json'));
         const { States, StatesA } = buildTypeClasses(loadDescription('mixstate_desc.json'));
-        let counter = new Counter(new States({
+        let counter = new Counter();
+
+        counter.states = new States({
             counter: 1000,
             done: true
-        }), [new StatesA({
+        });
+
+        counter.sss = [new StatesA({
             states: [new States({
                 counter: 0,
                 done: true
@@ -362,7 +383,7 @@ describe('state_test', () => {
                 done: false
             })],
             hex: new Bytes('02')
-        })]);
+        })];
 
 
         let newLockingScript = counter.getStateScript({

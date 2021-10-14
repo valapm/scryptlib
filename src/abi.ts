@@ -1,8 +1,8 @@
 import { int2Asm, bsv, genLaunchConfigFile, getStructNameByType, isArrayType, isStructType, checkArray, flatternArray, typeOfArg, deserializeArgfromASM, createStruct, createArray, asm2ScryptType, bin2num } from './utils';
 import { AbstractContract, TxContext, VerifyResult, AsmVarValues } from './contract';
 import { ScryptType, Bool, Int, SupportedParamType, Struct, TypeResolver, VariableType } from './scryptTypes';
-import { ABIEntityType, ABIEntity, ParamEntity } from './compilerWrapper';
-import { buildContractCodeASM, flatternArgs, flatternStateArgs, readState } from './internal';
+import { ABIEntityType, ABIEntity, ParamEntity, StateEntity } from './compilerWrapper';
+import { buildContractCodeASM, buildContractState, flatternArgs, flatternParams, flatternStateArgs, readState, stateProps2AsmTemplateArgs } from './internal';
 
 export interface Script {
   toASM(): string;
@@ -36,7 +36,6 @@ export interface DebugLaunch {
 export interface Argument {
   name: string,
   type: string,
-  state: boolean,
   value: SupportedParamType
 }
 
@@ -75,7 +74,7 @@ export class FunctionCall {
       contract: AbstractContract;
       lockingScriptASM?: string;
       unlockingScriptASM?: string;
-      params: SupportedParamType[];
+      args: Arguments;
     }
   ) {
 
@@ -85,22 +84,7 @@ export class FunctionCall {
 
     this.contract = binding.contract;
 
-
-    this.args = Object.getPrototypeOf(this.contract).constructor.abi.filter((entity: ABIEntity) => {
-      if ('constructor' === methodName) {
-        return entity.type === 'constructor';
-      }
-      return entity.name === methodName;
-    }).map((entity: ABIEntity) => {
-      return entity.params.map((param, index) => {
-        return {
-          name: param.name,
-          type: param.type,
-          state: param.state || false,
-          value: binding.params[index]
-        };
-      });
-    }).flat(1);
+    this.args = binding.args;
 
     if (binding.lockingScriptASM) {
       this._lockingScriptAsm = binding.lockingScriptASM;
@@ -211,7 +195,6 @@ export class ABICoder {
 
     // handle array type
     const flatteredArgs = flatternArgs(cParams.map((p, index) => (Object.assign({ ...p }, {
-      state: p.state,
       value: args[index]
     }))), this.finalTypeResolver);
 
@@ -221,35 +204,25 @@ export class ABICoder {
       if (!asmTemplate.includes(`$${arg.name}`)) {
         throw new Error(`abi constructor params mismatch with args provided: missing ${arg.name} in ASM tempalte`);
       }
-      if (arg.state) {
-        //if param is state , we use default value to new contract.
-        if (arg.type === VariableType.INT || arg.type === VariableType.PRIVKEY) {
-          contract.asmTemplateArgs.set(`$${arg.name}`, 'OP_0');
-        } else if (arg.type === VariableType.BOOL) {
-          contract.asmTemplateArgs.set(`$${arg.name}`, 'OP_TRUE');
-        } else if (arg.type === VariableType.BYTES
-          || arg.type === VariableType.PUBKEY
-          || arg.type === VariableType.SIG
-          || arg.type === VariableType.RIPEMD160
-          || arg.type === VariableType.SHA1
-          || arg.type === VariableType.SHA256
-          || arg.type === VariableType.SIGHASHTYPE
-          || arg.type === VariableType.SIGHASHPREIMAGE
-          || arg.type === VariableType.OPCODETYPE) {
-          contract.asmTemplateArgs.set(`$${arg.name}`, '00');
-        } else {
-          throw new Error(`param ${arg.name} has unknown type ${arg.type}`);
-        }
-
-      } else {
-        contract.asmTemplateArgs.set(`$${arg.name}`, this.encodeParam(arg.value, arg));
-      }
-
+      contract.asmTemplateArgs.set(`$${arg.name}`, this.encodeParam(arg.value, arg));
     });
+
+    const stateArgs: Arguments = stateProps2AsmTemplateArgs(contract);
 
     contract.asmTemplateArgs.set('$__codePart__', 'OP_0');
 
-    return new FunctionCall('constructor', { contract, lockingScriptASM: buildContractCodeASM(contract.asmTemplateArgs, asmTemplate), params: args });
+    contract.calls.set('__states', new FunctionCall('__states', { contract, lockingScriptASM: buildContractState(stateArgs, contract.typeResolver), args: stateArgs }));
+
+    return new FunctionCall('constructor', {
+      contract,
+      lockingScriptASM: buildContractCodeASM(contract.asmTemplateArgs, asmTemplate),
+      args: cParams.map((param, index) => ({
+        name: param.name,
+        type: param.type,
+        value: args[index]
+      }))
+    });
+
   }
 
   encodeConstructorCallFromRawHex(contract: AbstractContract, asmTemplate: string, raw: string): FunctionCall {
@@ -286,18 +259,19 @@ export class ABICoder {
     const args: Arguments = cParams.map(p => ({
       type: this.finalTypeResolver(p.type),
       name: p.name,
-      value: undefined,
-      state: p.state
+      value: undefined
     })).map(arg => {
 
-      deserializeArgfromASM(contract, arg, contract.asmTemplateArgs, this.finalTypeResolver);
+      deserializeArgfromASM(contract, arg, contract.asmTemplateArgs);
       return arg;
     });
 
 
     if (AbstractContract.isStateful(contract)) {
 
-      const flatteredArgs = flatternStateArgs(args, this.finalTypeResolver);
+      const stateProps = Object.getPrototypeOf(contract).constructor.stateProps as Array<StateEntity>;
+
+      const flatteredStateProps = flatternParams(stateProps, contract.typeResolver, contract.allTypes);
 
       const scriptHex = script.toHex();
       const metaScript = script.toHex().substr(scriptHex.length - 10, 10);
@@ -315,7 +289,7 @@ export class ABICoder {
 
             const br = new bsv.encoding.BufferReader(stateHex);
 
-            flatteredArgs.forEach((arg) => {
+            flatteredStateProps.forEach((arg) => {
               if (arg.type === VariableType.BOOL) {
                 const opcodenum = br.readUInt8();
                 stateAsmTemplateArgs.set(`$${arg.name}`, opcodenum === 1 ? '01' : '00');
@@ -333,15 +307,23 @@ export class ABICoder {
           break;
       }
 
-      args.filter(a => a.state).forEach(arg => {
 
-        deserializeArgfromASM(contract, arg, stateAsmTemplateArgs, this.finalTypeResolver);
+      const stateArgs: Arguments = stateProps.map(p => ({
+        type: this.finalTypeResolver(p.type),
+        name: p.name,
+        value: undefined
+      })).map(arg => {
+
+        deserializeArgfromASM(contract, arg, stateAsmTemplateArgs);
+        return arg;
       });
+
+      contract.calls.set('__states', new FunctionCall('__states', { contract, lockingScriptASM: buildContractState(stateArgs, contract.typeResolver), args: stateArgs }));
 
       lsASM = buildContractCodeASM(contract.asmTemplateArgs, asmTemplate);
     }
 
-    return new FunctionCall('constructor', { contract, lockingScriptASM: lsASM, params: args.map(arg => arg.value) });
+    return new FunctionCall('constructor', { contract, lockingScriptASM: lsASM, args: args });
 
   }
 
@@ -352,15 +334,20 @@ export class ABICoder {
         this.checkArgs(name, entity.params, ...args);
         let asm = this.encodeParams(args, entity.params.map(p => ({
           name: p.name,
-          type: this.finalTypeResolver(p.type),
-          state: p.state
+          type: this.finalTypeResolver(p.type)
         })));
         if (this.abi.length > 2 && entity.index !== undefined) {
           // selector when there are multiple public functions
           const pubFuncIndex = entity.index;
           asm += ` ${int2Asm(pubFuncIndex.toString())}`;
         }
-        return new FunctionCall(name, { contract, unlockingScriptASM: asm, params: args });
+        return new FunctionCall(name, {
+          contract, unlockingScriptASM: asm, args: entity.params.map((param, index) => ({
+            name: param.name,
+            type: param.type,
+            value: args[index]
+          }))
+        });
       }
     }
 
@@ -373,7 +360,7 @@ export class ABICoder {
 
   encodeParamArray(args: SupportedParamType[], arrayParam: ParamEntity): string {
     return flatternArray(args, arrayParam.name, arrayParam.type).map(arg => {
-      return this.encodeParam(arg.value, { name: arg.name, type: this.finalTypeResolver(arg.type), state: arrayParam.state });
+      return this.encodeParam(arg.value, { name: arg.name, type: this.finalTypeResolver(arg.type) });
     }).join(' ');
   }
 

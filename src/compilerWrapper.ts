@@ -94,6 +94,7 @@ export interface CompileResult {
   md5?: string;
   structs?: Array<StructEntity>;
   alias?: Array<AliasEntity>;
+  stateProps?: Array<StateEntity>;
   file?: string;
   buildType?: string;
   autoTypedVars?: AutoTypedVar[];
@@ -130,7 +131,7 @@ export interface AutoTypedVar {
 }
 
 export interface ABI {
-  contract: string, abi: Array<ABIEntity>
+  contract: string, abi: Array<ABIEntity>, stateProps: Array<ParamEntity>
 }
 
 export enum ABIEntityType {
@@ -140,7 +141,6 @@ export enum ABIEntityType {
 export type ParamEntity = {
   name: string;
   type: string;
-  state?: boolean;
 }
 export interface ABIEntity {
   type: ABIEntityType;
@@ -154,10 +154,8 @@ export interface StructEntity {
   params: Array<ParamEntity>;
 }
 
-export interface AliasEntity {
-  name: string;
-  type: string;
-}
+export type AliasEntity = ParamEntity;
+export type StateEntity = ParamEntity;
 
 export function compile(
   source: {
@@ -221,10 +219,11 @@ export function compile(
       result.alias = getAliasDeclaration(result.ast, allAst);
 
       result.staticConst = getStaticConstIntDeclaration(result.ast, allAst);
-      const { contract: name, abi } = getABIDeclaration(result.ast, result.alias, result.staticConst);
+      const { contract: name, abi, stateProps } = getABIDeclaration(result.ast, result.alias, result.staticConst);
 
       result.abi = abi;
       result.contract = name;
+      result.stateProps = stateProps;
       result.structs = getStructDeclaration(result.ast, allAst);
 
     }
@@ -326,7 +325,8 @@ export function compile(
         asm: result.asm.map(item => item['opcode'].trim()).join(' '),
         hex: result.hex || '',
         sources: [],
-        sourceMap: []
+        sourceMap: [],
+        stateProps: result.stateProps || []
       };
 
       if (settings.debug && asmObj) {
@@ -439,20 +439,27 @@ function getConstructorDeclaration(mainContract): ABIEntity {
   if (mainContract['constructor']) {
     return {
       type: ABIEntityType.CONSTRUCTOR,
-      params: mainContract['constructor']['params'].map(p => { return { name: p['name'], type: p['type'], state: false }; }),
+      params: mainContract['constructor']['params'].map(p => ({ name: p['name'], type: p['type'] })),
     };
   } else {
     // implicit constructor
     if (mainContract['properties']) {
       return {
         type: ABIEntityType.CONSTRUCTOR,
-        params: mainContract['properties'].map(p => { return { name: p['name'].replace('this.', ''), type: p['type'], state: p['state'] || false }; }),
+        params: mainContract['properties'].filter(p => !p.state).map(p => ({ name: p['name'].replace('this.', ''), type: p['type'] })),
       };
     }
   }
 }
 
-function getPublicFunctionDeclaration(mainContract): ABIEntity[] {
+function getStateProps(mainContract: unknown): Array<StateEntity> {
+  if (mainContract['properties']) {
+    return mainContract['properties'].filter(p => p.state).map(p => ({ name: p['name'].replace('this.', ''), type: p['type'] }));
+  }
+}
+
+
+function getPublicFunctionDeclaration(mainContract: unknown): ABIEntity[] {
   let pubIndex = 0;
   const interfaces: ABIEntity[] =
     mainContract['functions']
@@ -471,12 +478,13 @@ function getPublicFunctionDeclaration(mainContract): ABIEntity[] {
 
 
 
-export function getABIDeclaration(astRoot, alias: AliasEntity[], staticConstInt: Record<string, number>): ABI {
+export function getABIDeclaration(astRoot: unknown, alias: AliasEntity[], staticConstInt: Record<string, number>): ABI {
   const mainContract = astRoot['contracts'][astRoot['contracts'].length - 1];
   if (!mainContract) {
     return {
       contract: '',
-      abi: []
+      abi: [],
+      stateProps: []
     };
   }
 
@@ -493,9 +501,14 @@ export function getABIDeclaration(astRoot, alias: AliasEntity[], staticConstInt:
     });
   });
 
+  const stateProps = getStateProps(mainContract).map(p => Object.assign({ ...p }, {
+    type: resolveAbiParamType(mainContract['name'], p.type, alias, staticConstInt)
+  }));
+
   return {
     contract: mainContract['name'],
-    abi: interfaces
+    abi: interfaces,
+    stateProps: stateProps
   };
 }
 
@@ -655,6 +668,7 @@ export function desc2CompileResult(description: ContractDescription): CompileRes
     md5: description.md5,
     abi: description.abi,
     structs: description.structs,
+    stateProps: description.stateProps || [],
     alias: description.alias,
     file: description.file,
     buildType: description.buildType || BuildType.Debug,

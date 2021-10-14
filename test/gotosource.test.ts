@@ -474,7 +474,9 @@ describe('VerifyError', () => {
     it('should stop at statecounter.scrypt#24', () => {
 
       const StateCounter = buildContractClass(loadDescription('statecounter_desc.json'));
-      let counter = new StateCounter(0, true);
+      let counter = new StateCounter();
+      counter.counter = 0;
+      counter.done = true;
 
       let newLockingScript = counter.getStateScript({
         counter: 1,

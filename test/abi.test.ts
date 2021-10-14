@@ -42,7 +42,14 @@ describe('FunctionCall', () => {
   describe('when it is the contract constructor', () => {
 
     before(() => {
-      target = new FunctionCall('constructor', { contract: p2pkh, lockingScriptASM: p2pkh.lockingScript.toASM(), params: [new Ripemd160(toHex(pubKeyHash))] });
+      target = new FunctionCall('constructor', {
+        contract: p2pkh, lockingScriptASM: p2pkh.lockingScript.toASM(), args: [{
+          name: 'pubKeyHash',
+          type: 'Ripemd160',
+          value: new Ripemd160(toHex(pubKeyHash))
+        }
+        ]
+      });
     })
 
     describe('toHex() / toString()', () => {
@@ -74,7 +81,17 @@ describe('FunctionCall', () => {
     before(() => {
       sig = signTx(tx, privateKey, p2pkh.lockingScript, inputSatoshis);
       pubkey = new PubKey(toHex(publicKey));
-      target = new FunctionCall('unlock', { contract: p2pkh, unlockingScriptASM: [sig.toASM(), pubkey.toASM()].join(' '), params: [sig, pubkey] });
+      target = new FunctionCall('unlock', {
+        contract: p2pkh, unlockingScriptASM: [sig.toASM(), pubkey.toASM()].join(' '), args: [{
+          name: 'sig',
+          type: 'Sig',
+          value: sig
+        }, {
+          name: 'pubkey',
+          type: 'PubKey',
+          value: pubkey
+        }]
+      });
     })
 
     describe('toHex() / toString()', () => {
@@ -87,12 +104,10 @@ describe('FunctionCall', () => {
       it('abiParams should be correct', () => {
         expect(target.args).to.deep.include.members([{
           name: 'sig',
-          state: false,
           type: 'Sig',
           value: sig
         }, {
-          name: 'pubKey',
-          state: false,
+          name: 'pubkey',
           type: 'PubKey',
           value: pubkey
         }])
@@ -145,11 +160,16 @@ describe('FunctionCall', () => {
 
     before(() => {
       target = new FunctionCall('constructor', {
-        contract: person, lockingScriptASM: person.lockingScript.toASM(), params: [new Person({
-          isMale: false,
-          age: 33,
-          addr: new Bytes("68656c6c6f20776f726c6421")
-        })]
+        contract: person, lockingScriptASM: person.lockingScript.toASM(), args: [{
+          name: 'some',
+          type: 'Person',
+          value: new Person({
+            isMale: false,
+            age: 33,
+            addr: new Bytes("68656c6c6f20776f726c6421")
+          })
+
+        }]
       });
     })
 
