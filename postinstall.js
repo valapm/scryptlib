@@ -47,7 +47,7 @@ try {
 
 
         if (_isDev) {
-            execSync("npm i bsv", { stdio: 'inherit' });
+            // execSync("npm i bsv", { stdio: 'inherit' });
             execSync("npm i json-bigint", { stdio: 'inherit' });
 
             apply(false);
